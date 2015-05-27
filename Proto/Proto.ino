@@ -3,8 +3,12 @@
 /* Start Define Constants Here*/
 
 const int btnHr=5;
-int alarmHr=1;
-boolean btnHrState=false;
+const int btnMin=4;
+int alarmHr=0;
+int alarmMin=0;
+
+String alarmHrStr = "";
+String alarmMinStr = "";
 
 //Pin Address of LCD
 LiquidCrystal lcd(12, 11, 10, 9, 8, 7);
@@ -33,7 +37,15 @@ byte year = 0;
 /* End Define Constants Here*/
 
 void setup() {
-   //LCD
+   //Buttons
+   pinMode(btnHr, INPUT);
+   pinMode(btnMin, INPUT);
+
+  //LED
+     pinMode(3, OUTPUT);
+
+
+    //LCD
    lcd.begin(16, 2);
 
    //Contrast
@@ -51,8 +63,28 @@ void setup() {
 }
 
 void loop() {
-printTimeLCD();
-delay(1000);
+   if (digitalRead(btnHr) == HIGH){
+     digitalWrite(3,HIGH);
+     delay(200);
+     digitalWrite(3,LOW);
+     if (alarmHr == 23){
+       alarmHr=0;
+     }else{
+       alarmHr++;
+     }
+  }else if(digitalRead(btnMin) == HIGH){
+    digitalWrite(3,HIGH);
+    delay(200);
+    digitalWrite(3,LOW);
+    if (alarmMin == 55){
+       alarmMin=0;
+     }else{
+       alarmMin+=5;
+     }
+     
+   }else{
+      printTimeLCD();
+   }
 
 }
 
@@ -77,7 +109,19 @@ void printTimeLCD(){
    lcd.setCursor(0, 0);
    lcd.print(LCDLine1);
    lcd.setCursor(0, 1);
-   LCDLine2 = LCDLine2+"Alarm: "+alarmHr+":";
+   alarmHrStr = "";
+   if (alarmHr<10){
+     alarmHrStr = alarmHrStr+"0"+alarmHr;
+   }else{
+     alarmHrStr = alarmHrStr+alarmHr;
+   }
+    alarmMinStr = "";
+   if (alarmMin<10){
+     alarmMinStr = alarmMinStr+"0"+alarmMin;
+   }else{
+     alarmMinStr = alarmMinStr+alarmMin;
+   }
+   LCDLine2 = LCDLine2+"Alarm: "+alarmHrStr+":"+alarmMinStr;
    lcd.print(LCDLine2);
 
 }
