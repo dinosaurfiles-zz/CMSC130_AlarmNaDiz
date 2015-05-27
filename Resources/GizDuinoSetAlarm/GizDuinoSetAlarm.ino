@@ -55,6 +55,7 @@ void setup() {
 
 // Continuous function for converting bytes to decimals and vice versa
 void loop() {
+printTime();
 }
 byte decToBcd(byte val) {
   return ((val/10*16) + (val%10));
