@@ -1,5 +1,7 @@
 #include <Wire.h>
 #include <LiquidCrystal.h>
+#include <Pitches.h>;
+
 /* Start Define Constants Here*/
 
 const int btnHr=5;
@@ -16,8 +18,8 @@ LiquidCrystal lcd(12, 11, 10, 9, 8, 7);
 //transmission Address
 const int DS1307 = 0x68;
 
-String LCDLine1;
-String LCDLine2;
+String LCDLine1 = "";
+String LCDLine2 = "";
 
 //For
 const char* days[] =
@@ -37,146 +39,209 @@ byte year = 0;
 /* End Define Constants Here*/
 
 void setup() {
-   //Buttons
-   pinMode(btnHr, INPUT);
-   pinMode(btnMin, INPUT);
+        //Buttons
+        pinMode(btnHr, INPUT);
+        pinMode(btnMin, INPUT);
 
-  //LED
-     pinMode(3, OUTPUT);
+        //LED
+        pinMode(3, OUTPUT);
 
 
-    //LCD
-   lcd.begin(16, 2);
+        //LCD
+        lcd.begin(16, 2);
 
-   //Contrast
-   analogWrite(6, 100);
+        //Contrast
+        analogWrite(6, 100);
 
-   //RTC
-   Wire.begin();
-   Serial.begin(9600);
-   Serial.print("Current Time is: ");
-   printTimeSerial();
-   //delay/wait for input
-   //while (!Serial.available()) delay(10);
+        //RTC
+        Wire.begin();
+        Serial.begin(9600);
 
-   LCDLine1 = String("");
+        lcd.setCursor(0, 0);
+        lcd.print("Set Time On");
+        lcd.setCursor(0, 1);
+        lcd.print("Serial Monitor");
+
+
+        Serial.print("Current Time is: ");
+        printTimeSerial();
+        Serial.println("Please change to newline ending the settings on the lower right of the Serial Monitor");
+        Serial.println("Would you like to set the date and time now? Y/N");
+
+        while (!Serial.available()) delay(10);
+        if (Serial.read() == 'y' || Serial.read() == 'Y')
+
+        // This set of functions allows the user to change the date and time
+        {
+                Serial.read();
+                setTime();
+                Serial.print("The current date and time is now: ");
+                printTimeSerial();
+        }
+        lcd.clear();
+        Serial.println("Thank you.");
 }
 
 void loop() {
-   if (digitalRead(btnHr) == HIGH){
-     digitalWrite(3,HIGH);
-     delay(200);
-     digitalWrite(3,LOW);
-     if (alarmHr == 23){
-       alarmHr=0;
-     }else{
-       alarmHr++;
-     }
-  }else if(digitalRead(btnMin) == HIGH){
-    digitalWrite(3,HIGH);
-    delay(200);
-    digitalWrite(3,LOW);
-    if (alarmMin == 55){
-       alarmMin=0;
-     }else{
-       alarmMin+=5;
-     }
-     
-   }else{
-      printTimeLCD();
-   }
+        if (digitalRead(btnHr) == HIGH) {
+                digitalWrite(3,HIGH);
+                delay(200);
+                digitalWrite(3,LOW);
+                if (alarmHr == 23) {
+                        alarmHr=0;
+                }else{
+                        alarmHr++;
+                }
+        }else if(digitalRead(btnMin) == HIGH) {
+                digitalWrite(3,HIGH);
+                delay(200);
+                digitalWrite(3,LOW);
+                if (alarmMin == 59) {
+                        alarmMin=0;
+                }else{
+                        alarmMin++;
+                }
+        }else if (alarmHr == hour && alarmMin == minute) {
+                printTimeLCD();
+                digitalWrite(3,HIGH);
+                delay(200);
+                digitalWrite(3,LOW);
+                delay(500);
+
+        }
+        else{
+                printTimeLCD();
+        }
 
 }
 
 byte decToBcd(byte val) {
-  return ((val/10*16) + (val%10));
+        return ((val/10*16) + (val%10));
 }
 byte bcdToDec(byte val) {
-  return ((val/16*10) + (val%16));
+        return ((val/16*10) + (val%16));
 }
+
+void setTime() {
+        Serial.print("Please enter the current year, 00-99. - ");
+        year = readByte();
+        Serial.println(year);
+        Serial.print("Please enter the current month, 1-12. - ");
+        month = readByte();
+        Serial.println(months[month-1]);
+        Serial.print("Please enter the current day of the month, 1-31. - ");
+        monthday = readByte();
+        Serial.println(monthday);
+        Serial.println("Please enter the current day of the week, 1-7.");
+        Serial.print("1 Sun | 2 Mon | 3 Tues | 4 Weds | 5 Thu | 6 Fri | 7 Sat - ");
+        weekday = readByte();
+        Serial.println(days[weekday-1]);
+        Serial.print("Please enter the current hour in 24hr format, 0-23. - ");
+        hour = readByte();
+        Serial.println(hour);
+        Serial.print("Please enter the current minute, 0-59. - ");
+        minute = readByte();
+        Serial.println(minute);
+        second = 0;
+        Serial.println("The data has been entered.");
+
+        // The following codes transmits the data to the RTC
+        Wire.beginTransmission(DS1307);
+        Wire.write(byte(0));
+        Wire.write(decToBcd(second));
+        Wire.write(decToBcd(minute));
+        Wire.write(decToBcd(hour));
+        Wire.write(decToBcd(weekday));
+        Wire.write(decToBcd(monthday));
+        Wire.write(decToBcd(month));
+        Wire.write(decToBcd(year));
+        Wire.write(byte(0));
+        Wire.endTransmission();
+        // Ends transmission of data
+}
+
+byte readByte() {
+        while (!Serial.available()) delay(10);
+        byte reading = 0;
+        byte incomingByte = Serial.read();
+        while (incomingByte != '\n') {
+                if (incomingByte >= '0' && incomingByte <= '9')
+                        reading = reading * 10 + (incomingByte - '0');
+                else;
+                incomingByte = Serial.read();
+        }
+        Serial.flush();
+        return reading;
+}
+
 void printTimeLCD(){
-   char buffer[3];
-   const char* AMPM = 0;
-   readTime();
-   LCDLine1="";
-   LCDLine2="";
-   if (hour > 12) {
-     hour -= 12;
-     AMPM = " PM";
-   }
-   else AMPM = " AM";
-   LCDLine1 =LCDLine1+ hour +":" + minute+""+AMPM+" "+months[month-1]+"."+monthday+"."+year;
-   lcd.setCursor(0, 0);
-   lcd.print(LCDLine1);
-   lcd.setCursor(0, 1);
-   alarmHrStr = "";
-   if (alarmHr<10){
-     alarmHrStr = alarmHrStr+"0"+alarmHr;
-   }else{
-     alarmHrStr = alarmHrStr+alarmHr;
-   }
-    alarmMinStr = "";
-   if (alarmMin<10){
-     alarmMinStr = alarmMinStr+"0"+alarmMin;
-   }else{
-     alarmMinStr = alarmMinStr+alarmMin;
-   }
-   LCDLine2 = LCDLine2+"Alarm: "+alarmHrStr+":"+alarmMinStr;
-   lcd.print(LCDLine2);
+        char buffer[3];
+        const char* AMPM = 0;
+        readTime();
+        LCDLine1="";
+        LCDLine2="";
+        if (hour > 12) {
+                hour -= 12;
+                AMPM = " PM";
+        }
+        else AMPM = " AM";
+        LCDLine1 =LCDLine1+ hour +":" + minute+""+AMPM+" "+months[month-1]+"."+monthday+"."+year;
+        lcd.setCursor(0, 0);
+        lcd.print(LCDLine1);
+        lcd.setCursor(0, 1);
+        alarmHrStr = "";
+        if (alarmHr<10) {
+                alarmHrStr = alarmHrStr+"0"+alarmHr;
+        }else{
+                alarmHrStr = alarmHrStr+alarmHr;
+        }
+        alarmMinStr = "";
+        if (alarmMin<10) {
+                alarmMinStr = alarmMinStr+"0"+alarmMin;
+        }else{
+                alarmMinStr = alarmMinStr+alarmMin;
+
+        }
+        LCDLine2 = LCDLine2+"Alarm: "+alarmHrStr+":"+alarmMinStr;
+        lcd.print(LCDLine2);
 
 }
 
 
 void printTimeSerial() {
-  char buffer[3];
-  const char* AMPM = 0;
-  readTime();
-  Serial.print(days[weekday-1]);
-  Serial.print(" ");
-  Serial.print(months[month-1]);
-  Serial.print(" ");
-  Serial.print(monthday);
-  Serial.print(", 20");
-  Serial.print(year);
-  Serial.print(" ");
-  if (hour > 12) {
-    hour -= 12;
-    AMPM = " PM";
-  }
-  else AMPM = " AM";
-  Serial.print(hour);
-  Serial.print(":");
-  sprintf(buffer, "%02d", minute);
-  Serial.print(buffer);
-  Serial.println(AMPM);
-}
-
-byte readByte() {
-  while (!Serial.available()) delay(10);
-  byte reading = 0;
-  byte incomingByte = Serial.read();
-  while (incomingByte != '\n') {
-    if (incomingByte >= '0' && incomingByte <= '9')
-      reading = reading * 10 + (incomingByte - '0');
-    else;
-    incomingByte = Serial.read();
-  }
-  Serial.flush();
-  return reading;
+        char buffer[3];
+        const char* AMPM = 0;
+        readTime();
+        Serial.print(days[weekday-1]);
+        Serial.print(" ");
+        Serial.print(months[month-1]);
+        Serial.print(" ");
+        Serial.print(monthday);
+        Serial.print(", 20");
+        Serial.print(year);
+        Serial.print(" ");
+        if (hour > 12) {
+                hour -= 12;
+                AMPM = " PM";
+        }
+        else AMPM = " AM";
+        Serial.print(hour);
+        Serial.print(":");
+        sprintf(buffer, "%02d", minute);
+        Serial.print(buffer);
+        Serial.println(AMPM);
 }
 
 void readTime() {
-  Wire.beginTransmission(DS1307);
-  Wire.write(byte(0));
-  Wire.endTransmission();
-  Wire.requestFrom(DS1307, 7);
-  second = bcdToDec(Wire.read());
-  minute = bcdToDec(Wire.read());
-  hour = bcdToDec(Wire.read());
-  weekday = bcdToDec(Wire.read());
-  monthday = bcdToDec(Wire.read());
-  month = bcdToDec(Wire.read());
-  year = bcdToDec(Wire.read());
+        Wire.beginTransmission(DS1307);
+        Wire.write(byte(0));
+        Wire.endTransmission();
+        Wire.requestFrom(DS1307, 7);
+        second = bcdToDec(Wire.read());
+        minute = bcdToDec(Wire.read());
+        hour = bcdToDec(Wire.read());
+        weekday = bcdToDec(Wire.read());
+        monthday = bcdToDec(Wire.read());
+        month = bcdToDec(Wire.read());
+        year = bcdToDec(Wire.read());
 }
-
-
