@@ -42,7 +42,7 @@ void playtune(){
     int noteDuration = 1000/noteDurations[thisNote];
     
     // (pin number, melody, noteduraion)
-    tone(10, melody[thisNote],noteDuration);
+    tone(13, melody[thisNote],noteDuration);
 
     // to distinguish the notes, set a minimum time between them.
     // the note's duration + 30% seems to work well:
