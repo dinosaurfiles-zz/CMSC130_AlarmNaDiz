@@ -371,7 +371,7 @@ void printTimeSerial() {
         Serial.print(":");
         sprintf(buffer, "%02d", minute);
         Serial.print(buffer);
-        Serial.println(AMPM);
+        Serial.printl n(AMPM);
 }
 
 void readTime() {
